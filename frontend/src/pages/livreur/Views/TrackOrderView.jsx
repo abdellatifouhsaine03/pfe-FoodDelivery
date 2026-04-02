@@ -3,6 +3,8 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Search, Package, MapPin, Store, CreditCard, Info, CheckCircle2, Truck, Loader2 } from "lucide-react";
 
+const API_BASE = process.env.REACT_APP_API_BASE_URL || "http://localhost:8000/api";
+
 export function TrackOrderView() {
   const [orders, setOrders] = useState([]);
   const [currentOrder, setCurrentOrder] = useState(null);
@@ -13,11 +15,13 @@ export function TrackOrderView() {
 
   useEffect(() => {
     fetchOrders();
+    const intervalId = window.setInterval(fetchOrders, 15000);
+    return () => window.clearInterval(intervalId);
   }, []);
 
   const fetchOrders = () => {
     setLoading(true);
-    axios.get(`http://localhost:8000/api/orders/delivered/${riderId}`)
+    axios.get(`${API_BASE}/orders/delivered/${riderId}`)
       .then((response) => {
         setOrders(response.data);
         const myOrder = response.data.find(
@@ -35,7 +39,7 @@ export function TrackOrderView() {
       return;
     }
     try {
-      await axios.patch(`http://localhost:8000/api/orders/${orderId}/assign`, { rider_id: riderId });
+      await axios.patch(`${API_BASE}/orders/${orderId}/assign`, { rider_id: riderId });
       setCurrentOrder(orderId);
       fetchOrders();
     } catch (error) {
@@ -45,7 +49,7 @@ export function TrackOrderView() {
 
   const handleMarkAsDelivered = async (orderId) => {
     try {
-      await axios.patch(`http://localhost:8000/api/orders/${orderId}/delivered`);
+      await axios.patch(`${API_BASE}/orders/${orderId}/delivered`);
       setCurrentOrder(null);
       fetchOrders();
     } catch (error) {
@@ -98,7 +102,8 @@ export function TrackOrderView() {
 
 const OrderCard = ({ order, riderId, onAssign, onDeliver }) => {
   const isMine = order.rider_id === riderId;
-  const isPending = !order.rider_id;
+  const isWaitingForRestaurant = order.status === "pending";
+  const isReadyForPickup = !order.rider_id && order.status === "processing";
   const isDelivered = order.status === "delivered";
 
   return (
@@ -144,9 +149,15 @@ const OrderCard = ({ order, riderId, onAssign, onDeliver }) => {
       </div>
 
       <div className="p-4 bg-slate-50 mt-auto">
-        {isPending && (
+        {isWaitingForRestaurant && (
+          <div className="w-full py-3 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black uppercase text-center border border-amber-100">
+            Waiting For Restaurant
+          </div>
+        )}
+
+        {isReadyForPickup && (
           <button onClick={() => onAssign(order.id)} className="w-full py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200">
-            <Truck size={14} /> Prendre la commande
+            <Truck size={14} /> Take Order
           </button>
         )}
 

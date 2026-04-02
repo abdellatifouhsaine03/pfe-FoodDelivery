@@ -17,14 +17,14 @@ class OrdersController extends Controller
     // Lister toutes les commandes (avec leurs items)
     public function index()
     {
-        $orders = Order::with('items.menuItem')->get();
+        $orders = Order::with(['user', 'restaurant', 'rider', 'items.menu'])->get();
         return response()->json($orders);
     }
 
     // Afficher une commande spécifique
     public function show($id)
     {
-        $order = Order::with('items.menuItem')->findOrFail($id);
+        $order = Order::with(['user', 'restaurant', 'rider', 'items.menu'])->findOrFail($id);
         return response()->json($order);
     }
 
@@ -75,7 +75,7 @@ class OrdersController extends Controller
     public function getDeliveredOrders($id)
     {
         $orders = Order::with('restaurant')
-                       ->where('status', 'pending')
+                       ->whereIn('status', ['pending', 'processing'])
                        ->orWhere(function($query) use ($id) {
                            $query->where('status', 'out_for_delivery')
                                  ->where('rider_id', $id);
@@ -91,7 +91,7 @@ public function assignToRider(Request $request, $id)
 
     // Vérifie si le rider a déjà une commande en cours de livraison
     $existingOrder = Order::where('rider_id', $riderId)
-        ->where('status', 'pending')
+        ->where('status', 'out_for_delivery')
         ->first();
 
     if ($existingOrder) {
@@ -101,6 +101,19 @@ public function assignToRider(Request $request, $id)
     }
 
     $order = Order::findOrFail($id);
+
+    if (!in_array($order->status, ['pending', 'processing'], true)) {
+        return response()->json([
+            'message' => 'Cette commande ne peut plus Ãªtre prise en charge.',
+        ], 400);
+    }
+
+    if ($order->rider_id && (int) $order->rider_id !== (int) $riderId) {
+        return response()->json([
+            'message' => 'Cette commande est dÃ©jÃ  attribuÃ©e Ã  un autre livreur.',
+        ], 409);
+    }
+
     $order->rider_id = $riderId;
     $order->status = 'out_for_delivery';
     $order->save();
@@ -140,7 +153,7 @@ public function currentOrder(Request $request)
         // Récupérer la dernière commande "en cours" pour ce livreur
         $order = Order::with(['user', 'restaurant', 'items.menu'])
             ->where('rider_id', $riderId)
-            ->where('status', '!=', 'delivered')
+            ->where('status', 'out_for_delivery')
             ->latest()
             ->first();
 
@@ -153,7 +166,3 @@ public function currentOrder(Request $request)
 
 
 }
-
-
-
-

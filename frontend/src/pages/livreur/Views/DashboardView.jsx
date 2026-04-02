@@ -21,13 +21,22 @@ export function DashboardView() {
   const riderId = JSON.parse(localStorage.getItem("user")).id;
 
   useEffect(() => {
-    axios
-      .get(`http://localhost:8000/api/orders/rider/order?rider_id=${riderId}`)
-      .then((res) => {
-        setOrder(res.data);
-        setOrderItems(res.data.items);
-      })
-      .catch((err) => console.error("Error fetching order:", err));
+    const loadCurrentOrder = () => {
+      axios
+        .get(`http://localhost:8000/api/orders/rider/order?rider_id=${riderId}`)
+        .then((res) => {
+          setOrder(res.data);
+          setOrderItems(res.data.items);
+        })
+        .catch(() => {
+          setOrder(null);
+          setOrderItems([]);
+        });
+    };
+
+    loadCurrentOrder();
+    const intervalId = window.setInterval(loadCurrentOrder, 15000);
+    return () => window.clearInterval(intervalId);
   }, [riderId]);
 
   return (

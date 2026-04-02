@@ -76,6 +76,7 @@ Route::get('/best-promotions-and-categories', [MenuController::class, 'bestPromo
 Route::post('/orders', [OrderController::class, 'store_order']);
 Route::post('/order-items', [OrderController::class, 'store_items']);
 Route::get('/orders/user/{id}', [OrderController::class, 'getUserOrders']);
+Route::get('/orders/{id}/tracking', [OrderController::class, 'track']);
 Route::put('/orders/{id}/cancel', [OrderController::class, 'cancelOrder']);
 
 //seating-postion
@@ -160,5 +161,4 @@ Route::get('/rider/{riderId}/today-summary', [RidersController::class, 'getToday
 Route::get('/riders/{id}/profile', [RidersController::class, 'getProfile']);
 Route::get('/riders/{user_id}', [RidersController::class, 'showInfo']);
 Route::put('/riders/{user_id}', [RidersController::class, 'updateInfo']);
-
 

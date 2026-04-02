@@ -64,20 +64,28 @@ public function store_items(Request $request)
 }
 public function getUserOrders($userId)
 {
-    $orders = Order::with(['items.menu'])
+    $orders = Order::with([
+        'restaurant:id,name,address',
+        'rider:id,name,phone',
+        'items.menu:id,name,image',
+    ])
         ->where('user_id', $userId)
         ->orderBy('created_at', 'desc')
         ->get()
-        ->map(function ($order) {
-            return [
-                'id' => $order->id,
-                'date' => $order->created_at->format('Y-m-d H:i'),
-                'status' => ucfirst($order->status),
-                'items' => $order->items->map(fn($item) => $item->menu->name)->implode(', ')
-            ];
-        });
+        ->map(fn($order) => $this->serializeOrder($order));
 
     return response()->json($orders);
+}
+
+public function track($id)
+{
+    $order = Order::with([
+        'restaurant:id,name,address',
+        'rider:id,name,phone',
+        'items.menu:id,name,image',
+    ])->findOrFail($id);
+
+    return response()->json($this->serializeOrder($order));
 }
 
 // Annuler une commande
@@ -97,5 +105,145 @@ public function cancelOrder($id)
     $order->save();
 
     return response()->json(['message' => 'Order cancelled successfully', 'order' => $order]);
+}
+
+private function serializeOrder(Order $order): array
+{
+    $items = $order->items->map(function ($item) {
+        $quantity = max((int) $item->quantity, 1);
+        $lineTotal = (float) $item->price;
+
+        return [
+            'id' => $item->id,
+            'name' => $item->menu?->name ?? 'Menu item',
+            'image' => $item->menu?->image,
+            'quantity' => $quantity,
+            'unit_price' => round($lineTotal / $quantity, 2),
+            'line_total' => $lineTotal,
+            'special_instructions' => $item->special_instructions,
+        ];
+    })->values();
+
+    return [
+        'id' => $order->id,
+        'order_number' => $order->order_number,
+        'status' => $order->status,
+        'status_label' => $this->statusLabel($order->status),
+        'status_note' => $this->statusNote($order),
+        'progress_percentage' => $this->progressPercentage($order->status),
+        'can_cancel' => $order->status === 'pending',
+        'placed_at' => $order->created_at?->toIso8601String(),
+        'updated_at' => $order->updated_at?->toIso8601String(),
+        'delivered_at' => $order->delivered_at?->toIso8601String(),
+        'delivery_address' => $order->delivery_address,
+        'contact_number' => $order->contact_number,
+        'special_instructions' => $order->special_instructions,
+        'subtotal' => (float) $order->subtotal,
+        'delivery_fee' => (float) $order->delivery_fee,
+        'total' => (float) $order->total,
+        'payment_method' => $order->payment_method,
+        'payment_method_label' => $this->paymentMethodLabel($order->payment_method),
+        'payment_status' => $order->payment_status,
+        'restaurant' => $order->restaurant ? [
+            'id' => $order->restaurant->id,
+            'name' => $order->restaurant->name,
+            'address' => $order->restaurant->address,
+        ] : null,
+        'rider' => $order->rider ? [
+            'id' => $order->rider->id,
+            'name' => $order->rider->name,
+            'phone' => $order->rider->phone,
+        ] : null,
+        'items_summary' => $items->map(fn($item) => $item['quantity'] . 'x ' . $item['name'])->implode(', '),
+        'tracking_steps' => $this->trackingSteps($order->status),
+        'items' => $items->all(),
+    ];
+}
+
+private function trackingSteps(string $status): array
+{
+    $steps = [
+        ['key' => 'pending', 'label' => 'Order placed', 'description' => 'We received your order and sent it to the restaurant.'],
+        ['key' => 'processing', 'label' => 'Preparing', 'description' => 'The restaurant is preparing your items.'],
+        ['key' => 'out_for_delivery', 'label' => 'On the way', 'description' => 'Your rider has picked up the order.'],
+        ['key' => 'delivered', 'label' => 'Delivered', 'description' => 'The order arrived at your address.'],
+    ];
+
+    $currentIndex = $this->statusIndex($status);
+
+    return collect($steps)->map(function ($step, $index) use ($currentIndex, $status) {
+        $isCancelled = $status === 'cancelled';
+        $completed = !$isCancelled && $index < $currentIndex;
+        $current = !$isCancelled && $index === $currentIndex;
+
+        if ($isCancelled) {
+            $completed = $index === 0;
+            $current = false;
+        }
+
+        return [
+            ...$step,
+            'completed' => $completed,
+            'current' => $current,
+        ];
+    })->values()->all();
+}
+
+private function statusIndex(string $status): int
+{
+    return match ($status) {
+        'pending' => 0,
+        'processing' => 1,
+        'out_for_delivery' => 2,
+        'delivered' => 3,
+        default => 0,
+    };
+}
+
+private function progressPercentage(string $status): int
+{
+    return match ($status) {
+        'pending' => 25,
+        'processing' => 50,
+        'out_for_delivery' => 80,
+        'delivered' => 100,
+        default => 0,
+    };
+}
+
+private function statusLabel(string $status): string
+{
+    return match ($status) {
+        'pending' => 'Pending',
+        'processing' => 'Preparing',
+        'out_for_delivery' => 'On the way',
+        'delivered' => 'Delivered',
+        'cancelled' => 'Cancelled',
+        default => ucfirst(str_replace('_', ' ', $status)),
+    };
+}
+
+private function statusNote(Order $order): string
+{
+    return match ($order->status) {
+        'pending' => 'The restaurant has received your order.',
+        'processing' => 'Your meal is being prepared.',
+        'out_for_delivery' => $order->rider
+            ? $order->rider->name . ' is heading to your address.'
+            : 'A rider is on the way with your order.',
+        'delivered' => 'Your order was delivered successfully.',
+        'cancelled' => 'This order was cancelled before delivery.',
+        default => 'Your order is being updated.',
+    };
+}
+
+private function paymentMethodLabel(string $paymentMethod): string
+{
+    return match ($paymentMethod) {
+        'cash' => 'Cash',
+        'credit_card' => 'Credit card',
+        'mobile_payment' => 'Mobile payment',
+        default => ucfirst(str_replace('_', ' ', $paymentMethod)),
+    };
 }
 }

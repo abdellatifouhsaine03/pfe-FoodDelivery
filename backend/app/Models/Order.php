@@ -12,7 +12,15 @@ class Order extends Model
     protected $fillable = [
         'user_id', 'restaurant_id', 'rider_id', 'order_number', 'status',
         'delivery_address', 'contact_number', 'special_instructions',
-        'subtotal', 'delivery_fee', 'total', 'payment_method', 'payment_status'
+        'subtotal', 'delivery_fee', 'total', 'payment_method', 'payment_status',
+        'delivered_at',
+    ];
+
+    protected $casts = [
+        'subtotal' => 'float',
+        'delivery_fee' => 'float',
+        'total' => 'float',
+        'delivered_at' => 'datetime',
     ];
 
     public function user()

@@ -2,11 +2,12 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Header from "../../components/dashboard/Header";
-import { ShoppingCart, Package, Truck, CheckCircle, User, MapPin } from "lucide-react";
+import { ShoppingCart, Package, Truck, CheckCircle, User, Loader2 } from "lucide-react";
 
 export default function TodayOrders() {
   const [orders, setOrders] = useState([]);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
   const user = JSON.parse(localStorage.getItem("user"));
   const userId = user?.id;
 
@@ -26,8 +27,26 @@ export default function TodayOrders() {
   const stats = {
     all: orders.length,
     pending: orders.filter(o => o.status === 'pending').length,
+    processing: orders.filter(o => o.status === 'processing').length,
     out_for_delivery: orders.filter(o => o.status === 'out_for_delivery').length,
     delivered: orders.filter(o => o.status === 'delivered').length,
+  };
+
+  const handleStartPreparing = async (orderId) => {
+    setUpdatingOrderId(orderId);
+    try {
+      const response = await axios.patch(`http://127.0.0.1:8000/api/orders/${orderId}/status`, {
+        status: "processing",
+      });
+      setOrders((currentOrders) =>
+        currentOrders.map((order) => (order.id === orderId ? { ...order, status: response.data.status } : order))
+      );
+    } catch (error) {
+      console.error("Status update error:", error);
+      alert("Unable to update this order right now.");
+    } finally {
+      setUpdatingOrderId(null);
+    }
   };
 
   const FilterButton = ({ id, label, count, icon: Icon }) => (
@@ -55,6 +74,7 @@ export default function TodayOrders() {
       <div className="flex flex-wrap gap-4 items-center">
         <FilterButton id="all" label="All Orders" count={stats.all} icon={ShoppingCart} />
         <FilterButton id="pending" label="Pending" count={stats.pending} icon={Package} />
+        <FilterButton id="processing" label="Preparing" count={stats.processing} icon={Loader2} />
         <FilterButton id="out_for_delivery" label="On Route" count={stats.out_for_delivery} icon={Truck} />
         <FilterButton id="delivered" label="Completed" count={stats.delivered} icon={CheckCircle} />
       </div>
@@ -85,6 +105,7 @@ export default function TodayOrders() {
                 </div>
                 <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] border ${
                   order.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                  order.status === 'processing' ? 'bg-blue-50 text-blue-600 border-blue-100' :
                   order.status === 'delivered' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                   'bg-blue-50 text-blue-600 border-blue-100'
                 }`}>
@@ -113,7 +134,7 @@ export default function TodayOrders() {
                     </div>
                     <div className="text-right">
                       <span className="font-black text-slate-700 text-sm">
-                        {(item.menu_item?.price ?? item.price ?? 0) * item.quantity} MAD
+                        {Number(item.price ?? 0).toFixed(2)} MAD
                       </span>
                     </div>
                   </div>
@@ -134,9 +155,31 @@ export default function TodayOrders() {
 
               {/* Quick Action Button */}
               <div className="px-6 pb-6">
-                <button className="w-full py-3 bg-black border-2 border-slate-100 rounded-2xl text-white text-xs font-white uppercase tracking-widest text-slate-600 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all active:scale-95">
-                  Update Order Status
-                </button>
+                {order.status === "pending" && (
+                  <button
+                    onClick={() => handleStartPreparing(order.id)}
+                    disabled={updatingOrderId === order.id}
+                    className="w-full py-3 bg-black border-2 border-slate-100 rounded-2xl text-white text-xs font-black uppercase tracking-widest hover:bg-slate-900 hover:border-slate-900 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  >
+                    {updatingOrderId === order.id ? <Loader2 size={14} className="animate-spin" /> : null}
+                    Mark As Preparing
+                  </button>
+                )}
+                {order.status === "processing" && (
+                  <div className="w-full py-3 bg-blue-50 border border-blue-100 rounded-2xl text-blue-600 text-xs font-black uppercase tracking-widest text-center">
+                    Kitchen Is Preparing
+                  </div>
+                )}
+                {order.status === "out_for_delivery" && (
+                  <div className="w-full py-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-600 text-xs font-black uppercase tracking-widest text-center">
+                    Rider Picked Up Order
+                  </div>
+                )}
+                {order.status === "delivered" && (
+                  <div className="w-full py-3 bg-slate-100 border border-slate-200 rounded-2xl text-slate-600 text-xs font-black uppercase tracking-widest text-center">
+                    Order Completed
+                  </div>
+                )}
               </div>
 
             </div>

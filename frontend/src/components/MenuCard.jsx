@@ -1,60 +1,38 @@
-"use client"
-
-import { useState } from "react"
-import "./MenuCard.css"
-import { useCart } from "../context/CartContext"
-import imaga from "../3.avif"
+import React from "react";
+import { useCart } from "../context/CartContext";
 
 const MenuCard = ({ item }) => {
-  const { id, name, description, image, price } = item
-  const [selectedSize, setSelectedSize] = useState('medieum')
-  const { addToCart , cartItems } = useCart()
-
-  // const getPrice = () => {
-  //   return sizes?.find((s) => s.size === selectedSize).price
-  // }
-
-  const handleAddToCart = () => {
-    addToCart({
-      id,
-      name,
-      image,
-      price,
-    })
-  }
-
-  
+  const { id, name, description, image, price } = item;
+  const { addToCart } = useCart();
 
   return (
-    <div className="menu-card">
-      <div className="menu-card-image">
-        <img src={image} alt={name} />
-      </div>
-      <div className="menu-card-content">
-        <h3 className="menu-card-title">{name}</h3>
-        <p className="menu-card-description">{description}</p>
-
-        {/* <div className="menu-card-sizes">
-          {sizes?.map((sizeOption) => (
-            <button
-              key={sizeOption.size}
-              className={`size-btn ${selectedSize === sizeOption.size ? "active" : ""}`}
-              onClick={() => setSelectedSize(sizeOption.size)}
-            >
-              {sizeOption.size}
-            </button>
-          ))}
-        </div> */}
-
-        <div className="menu-card-footer">
-          <span className="menu-card-price">{price} DH</span>
-          <button className="btn btn-primary add-to-cart-btn" onClick={handleAddToCart}>
-            Add to Cart
-          </button>
+    <div className="group flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 transition hover:shadow-xl hover:-translate-y-1">
+      <div className="relative h-48 w-full overflow-hidden">
+        <img 
+          src={image} 
+          alt={name} 
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-110" 
+        />
+        <div className="absolute top-3 right-3 rounded-full bg-white/90 px-3 py-1 text-sm font-bold shadow-sm backdrop-blur-md">
+          {price} DH
         </div>
       </div>
+      
+      <div className="flex flex-1 flex-col p-5">
+        <h3 className="mb-2 text-lg font-bold text-gray-900 leading-tight">{name}</h3>
+        <p className="mb-4 text-sm text-gray-500 line-clamp-2 leading-relaxed flex-1">
+          {description}
+        </p>
+        
+        <button 
+          onClick={() => addToCart({ id, name, image, price })}
+          className="w-full rounded-xl bg-slate-900 py-3 text-sm font-semibold text-white transition hover:bg-orange-500 active:scale-95"
+        >
+          Add to Order
+        </button>
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default MenuCard
+export default MenuCard;
