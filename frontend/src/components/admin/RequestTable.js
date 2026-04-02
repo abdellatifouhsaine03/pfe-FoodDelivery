@@ -1,269 +1,146 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import axios from "axios";
-import "./RequestTable.css";
+import { 
+  Eye, Check, X, FileText, Smartphone, Mail, 
+  MapPin, Utensils, PlusCircle, Loader2 
+} from "lucide-react";
 
-const RequestTable = ({
-  requests,
-  type,
-  onViewDetails,
-  onUpdateStatus, 
-}) => {
- 
-  const getApplicationStatusClass = (status) => {
-    switch (status) {
-      case "pending":
-        return "application-status-pending";
-      case "approved":
-        return "application-status-approved";
-      case "rejected":
-        return "application-status-rejected";
-      default:
-        return "";
-    }
-  };
+const RequestTable = ({ requests, type, onViewDetails, onUpdateStatus }) => {
+  const [loadingId, setLoadingId] = useState(null);
 
-  const getStatusDisplayText = (status) =>
-    status.charAt(0).toUpperCase() + status.slice(1);
-
-  //accept 
-  const handleApprove = async (id) => {
+  // THE FIX: Unified handler for both Approve and Reject
+  const handleAction = async (id, action) => {
+    setLoadingId(id);
     try {
-      await axios.put(
-        `http://localhost:8000/api/${type === "rider" ? "riders" : "restaurants"}/${id}/approve`
-      );
-      if (onUpdateStatus) onUpdateStatus(id, "approved");
-      alert("accept est secceus")
+      const endpoint = type === "rider" ? "riders" : "restaurants";
+      
+      // Update Backend
+      await axios.put(`http://localhost:8000/api/${endpoint}/${id}/${action}`);
+      
+      // Update Frontend State (Crucial for the buttons to disappear)
+      const finalStatus = action === "approve" ? "approved" : "rejected";
+      if (onUpdateStatus) onUpdateStatus(id, finalStatus);
+      
     } catch (error) {
-      console.error("Error approving request:", error);
-      alert("Failed to approve the request.");
+      console.error(`Failed to ${action}:`, error);
+      alert(`Error: Could not ${action} request. Check backend logs.`);
+    } finally {
+      setLoadingId(null);
     }
   };
 
-  // Refese
-  const handleReject = async (id) => {
-    try {
-      await axios.put(
-        `http://localhost:8000/api/${type === "rider" ? "riders" : "restaurants"}/${id}/reject`
-      );
-      if (onUpdateStatus) onUpdateStatus(id, "rejected");
-      alert("refus request ❌")
-    } catch (error) {
-      console.error("Error rejecting request:", error);
-      alert("Failed to reject the request.");
-    }
+  const StatusBadge = ({ status }) => {
+    const styles = {
+      pending: "bg-amber-50 text-amber-700 border-amber-100",
+      approved: "bg-emerald-50 text-emerald-700 border-emerald-100",
+      rejected: "bg-rose-50 text-rose-700 border-rose-100",
+    };
+    return (
+      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${styles[status] || "bg-slate-100 text-slate-600"}`}>
+        {status}
+      </span>
+    );
   };
 
-const renderRiderApplicationsTable = () => (
-  <table className="applications-data-table">
-    <thead>
-      <tr>
-        <th>CONTACT</th>
-        <th>VEHICLE</th>
-        <th>LICENSE PLATE</th>
-        <th>DOCUMENTS</th>
-        <th>STATUS</th>
-        <th>DATE</th>
-        <th>ACTIONS</th>
-      </tr>
-    </thead>
-    <tbody>
-      {requests.map((rider) => (
-        <tr key={rider.id}>
-          <td>
-            <div>
-              <strong>{rider.user.name}</strong><br />
-              <small>{rider.user.email}</small><br />
-              <small>{rider.user.phone}</small>
-            </div>
-          </td>
-          <td>
-            {rider.vehicle_type} - {rider.vehicle_model}
-          </td>
-          <td>{rider.license_plate}</td>
-          <td>
-            <ul>
-               <li>
-                 <a
-                   href={`http://localhost:8000/storage/${rider.id_document_path}`}
-                   target="_blank"
-                   rel="noreferrer"
-                 >
-                   ID Document
-                 </a>
-               </li>
-               <li>
-                 <a
-                   href={`http://localhost:8000/storage/${rider.driving_license_path}`}
-                   target="_blank"
-                   rel="noreferrer"
-                 >
-                   Driving License
-                 </a>
-               </li>
-          </ul>
+  const DocChip = ({ href, label, icon: Icon }) => (
+    <a 
+      href={href} 
+      target="_blank" 
+      rel="noreferrer"
+      className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 text-slate-500 rounded-md hover:bg-emerald-50 hover:text-emerald-600 transition-all border border-slate-100 hover:border-emerald-200 group/doc"
+    >
+      <Icon size={12} className="group-hover/doc:text-emerald-500" />
+      <span className="text-[10px] font-black uppercase tracking-tight">{label}</span>
+    </a>
+  );
 
-         </td>
-          <td>
-            <span className={`badge badge-${rider.status}`}>
-              {rider.status}
-            </span>
-          </td>
-          <td>{new Date(rider.created_at).toLocaleDateString()}</td>
-          <td>
-              <div className="table-row-actions">
-                <button
-                  className="table-action-button view-details-btn"
-                  onClick={() => onViewDetails(rider)}
-                  title="View Details"
-                >
-                  👁️
-                </button>
-                {rider.status === "pending" && (
-                  <>
-                    <button
-                      className="table-action-button approve-request-btn"
-                      onClick={() => handleApprove(rider.id)}
-                      title="Approve"
-                    >
-                      ✅
-                    </button>
-                    <button
-                      className="table-action-button reject-request-btn"
-                      onClick={() => handleReject(rider.id)}
-                      title="Reject"
-                    >
-                      ❌
-                    </button>
-                  </>
-                )}
-              </div>
-            </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-);
-
-
-  const renderRestaurantApplicationsTable = () => (
-    <table className="applications-data-table">
-      <thead>
-        <tr>
-          <th>APPLICANT</th>
-          <th>CONTACT</th>
-          <th>ADDRESS</th>
-          <th>RESTAURANT</th>
-          <th>CUISINE TYPE</th>
-          <th>LOGO</th>
-          <th>BUSINESS LICENSE</th>
-          <th>STATUS</th>
-          <th>DATE</th>
-          <th>ACTIONS</th>
-        </tr>
-      </thead>
-      <tbody>
-        {requests.map((request) => (
-          <tr key={request.id}>
-            <td>
-              <div className="restaurant-applicant-info">
-                <div className="restaurant-owner-avatar">
-                  {request.user.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="restaurant-owner-details">
-                  <div className="restaurant-owner-name">{request.user.name}</div>
-                </div>
-              </div>
-            </td>
-            <td>
-              <div className="restaurant-contact-details">
-                <div className="restaurant-email-address">{request.user.email}</div>
-                <div className="restaurant-phone-number">{request.user.phone}</div>
-              </div>
-            </td>
-            <td>{request.address}</td>
-            <td>{request.name}</td>
-            <td>{request.cuisine_type}</td>
-            <td>
-              {request.logo ? (
-                <img
-                  src={`http://localhost:8000/storage/${request.logo}`}
-                  alt={`${request.name} logo`}
-                  className="restaurant-logo-img"
-                  style={{
-                    width: "50px",
-                    height: "50px",
-                    objectFit: "cover",
-                    borderRadius: "4px",
-                  }}
-                />
-              ) : (
-                "N/A"
-              )}
-            </td>
-            <td>
-              {request.business_license ? (
-                <a
-                   href={`http://localhost:8000/storage/${request.business_license}`}
-                   target="_blank"
-                   rel="noreferrer"
-                 >
-                  View License
-                </a>
-              ) : (
-                "N/A"
-              )}
-            </td>
-            <td>
-              <span
-                className={`application-status-badge ${getApplicationStatusClass(
-                  request.status
-                )}`}
-              >
-                {getStatusDisplayText(request.status)}
-              </span>
-            </td>
-            <td>{request.date}</td>
-            <td>
-              <div className="table-row-actions">
-                <button
-                  className="table-action-button view-details-btn"
-                  onClick={() => onViewDetails(request)}
-                  title="View Details"
-                >
-                  👁️
-                </button>
-                {request.status === "pending" && (
-                  <>
-                    <button
-                      className="table-action-button approve-request-btn"
-                      onClick={() => handleApprove(request.id)}
-                      title="Approve"
-                    >
-                      ✅
-                    </button>
-                    <button
-                      className="table-action-button reject-request-btn"
-                      onClick={() => handleReject(request.id)}
-                      title="Reject"
-                    >
-                      ❌
-                    </button>
-                  </>
-                )}
-              </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+  const Th = ({ children }) => (
+    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] border-b border-slate-100 bg-slate-50/50">
+      {children}
+    </th>
   );
 
   return (
-    <div className="applications-table-wrapper">
-      {type === "rider"
-        ? renderRiderApplicationsTable()
-        : renderRestaurantApplicationsTable()}
+    <div className="overflow-x-auto bg-white rounded-[2rem] border border-slate-200 shadow-sm">
+      <table className="w-full border-collapse">
+        <thead>
+          <tr>
+            <Th>{type === "rider" ? "Rider" : "Restaurant"}</Th>
+            <Th>Contact</Th>
+            <Th>Documents</Th>
+            <Th>Status</Th>
+            <Th>Actions</Th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-50">
+          {requests.map((item) => (
+            <tr key={item.id} className="group hover:bg-slate-50/50 transition-colors">
+              {/* Identity Column */}
+              <td className="px-6 py-5">
+                <div className="flex flex-col">
+                  <span className="font-black text-slate-900 text-sm">{type === "rider" ? item.user?.name : item.name}</span>
+                  {type === "rider" && <span className="text-[10px] font-bold text-emerald-500 uppercase">{item.vehicle_type} • {item.license_plate}</span>}
+                  {type === "restaurant" && <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1"><MapPin size={10}/> {item.address}</span>}
+                </div>
+              </td>
+
+              {/* Contact Column */}
+              <td className="px-6 py-5">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs text-slate-500 flex items-center gap-1.5"><Mail size={12}/> {item.user?.email}</span>
+                  <span className="text-xs text-slate-500 flex items-center gap-1.5"><Smartphone size={12}/> {item.user?.phone}</span>
+                </div>
+              </td>
+
+              {/* Documents Column */}
+              <td className="px-6 py-5">
+                <div className="flex gap-2">
+                  {type === "rider" ? (
+                    <>
+                      <DocChip href={`http://localhost:8000/storage/${item.id_document_path}`} label="ID" icon={FileText} />
+                      <DocChip href={`http://localhost:8000/storage/${item.driving_license_path}`} label="DL" icon={PlusCircle} />
+                    </>
+                  ) : (
+                    <DocChip href={`http://localhost:8000/storage/${item.business_license}`} label="License" icon={FileText} />
+                  )}
+                </div>
+              </td>
+
+              {/* Status Column */}
+              <td className="px-6 py-5">
+                <StatusBadge status={item.status} />
+              </td>
+
+              {/* Actions Column */}
+              <td className="px-6 py-5">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => onViewDetails(item)} className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200"><Eye size={16}/></button>
+                  
+                  {item.status === "pending" && (
+                    <>
+                      <button
+                        disabled={loadingId === item.id}
+                        onClick={() => handleAction(item.id, "approve")}
+                        className="p-2 bg-emerald-100 text-emerald-600 rounded-xl hover:bg-emerald-500 hover:text-white transition-all disabled:opacity-50"
+                      >
+                        {loadingId === item.id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={3} />}
+                      </button>
+                      <button
+                        disabled={loadingId === item.id}
+                        onClick={() => handleAction(item.id, "reject")}
+                        className="p-2 bg-rose-100 text-rose-600 rounded-xl hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50"
+                      >
+                        <X size={16} strokeWidth={3} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };

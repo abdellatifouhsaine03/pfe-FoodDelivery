@@ -1,38 +1,29 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Circle, Radio  } from "lucide-react";
 
 const STATUS_ORDER = ["available", "on_delivery", "on_break", "offline"];
-const STATUS_LABELS = {
-  available: "Disponible",
-  on_delivery: "En livraison",
-  on_break: "En pause",
-  offline: "Offline",
-};
-const STATUS_COLORS = {
-  available: "#4caf50",
-  on_delivery: "#2196F3",
-  on_break: "#FFC107",
-  offline: "#F44336",
+const STATUS_CONFIG = {
+  available: { label: "Disponible", color: "bg-emerald-500", text: "text-emerald-600", bg: "bg-emerald-50" },
+  on_delivery: { label: "En livraison", color: "bg-blue-500", text: "text-blue-600", bg: "bg-blue-50" },
+  on_break: { label: "En pause", color: "bg-amber-500", text: "text-amber-600", bg: "bg-amber-50" },
+  offline: { label: "Offline", color: "bg-rose-500", text: "text-rose-600", bg: "bg-rose-50" },
 };
 
-export default function RiderStatus({ riderId = 2 }) {
+export default function RiderStatus({ riderId }) {
   const [status, setStatus] = useState("available");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    axios
-      .get(`http://localhost:8000/api/rider/status?rider_id=${riderId}`)
+    axios.get(`http://localhost:8000/api/rider/status?rider_id=${riderId}`)
       .then((res) => setStatus(res.data.status))
-      .catch((err) => console.error("Erreur statut:", err));
+      .catch((err) => console.error("Error fetching status:", err));
   }, [riderId]);
 
   const updateStatus = (newStatus) => {
     if (loading || status === newStatus) return;
     setLoading(true);
-    axios
-      .post(`http://localhost:8000/api/rider/status?rider_id=${riderId}`, {
-        status: newStatus,
-      })
+    axios.post(`http://localhost:8000/api/rider/status?rider_id=${riderId}`, { status: newStatus })
       .then((res) => {
         setStatus(res.data.status);
         setLoading(false);
@@ -40,73 +31,45 @@ export default function RiderStatus({ riderId = 2 }) {
       .catch(() => setLoading(false));
   };
 
-  // Position du toggle (0 à 3)
-  const activeIndex = STATUS_ORDER.indexOf(status);
-
   return (
-    <div
-      style={{
-        fontFamily: "Arial, sans-serif",
-        maxWidth: 350,
-        margin: "20px auto",
-        padding: "20px",
-        backgroundColor: "#f9f9f9",
-        borderRadius: "10px",
-        boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-      }}
-    >
-      <h3 style={{ textAlign: "center" }}>Statut du livreur</h3>
-
-      {/* Toggle Switches */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginTop: "20px" }}>
-        {STATUS_ORDER.map((key, i) => (
-          <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            {/* Label */}
-            <span style={{ fontSize: 16, fontWeight: "bold" }}>{STATUS_LABELS[key]}</span>
-
-            {/* Toggle Switch */}
-            <label
-              className="toggle-switch"
-              style={{
-                position: "relative",
-                width: "60px",
-                height: "30px",
-                borderRadius: "15px",
-                background: status === key ? STATUS_COLORS[key] : "#ddd",
-                cursor: loading ? "not-allowed" : "pointer",
-                userSelect: "none",
-                transition: "background 0.3s ease",
-                pointerEvents: loading ? "none" : "auto",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={status === key}
-                onChange={() => !loading && updateStatus(key)}
-                style={{ opacity: 0, position: "absolute", zIndex: -1 }}
-              />
-              <span
-                className="slider round"
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  left: status === key ? "calc(100% - 20px)" : "5px",
-                  width: "20px",
-                  height: "20px",
-                  borderRadius: "50%",
-                  backgroundColor: "#fff",
-                  transition: "left 0.3s ease",
-                }}
-              ></span>
-            </label>
-          </div>
-        ))}
+    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+      <div className="flex items-center justify-between mb-8">
+        <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Live Availability</h3>
+        <div className={`px-4 py-1.5 rounded-full ${STATUS_CONFIG[status].bg} ${STATUS_CONFIG[status].text} text-[10px] font-black uppercase`}>
+          Currently {status.replace('_', ' ')}
+        </div>
       </div>
 
-      <p style={{ textAlign: "center", marginTop: 20 }}>
-        Statut actuel : <strong style={{ color: STATUS_COLORS[status] }}>{status}</strong>
-      </p>
+      <div className="space-y-3">
+        {STATUS_ORDER.map((key) => {
+          const isActive = status === key;
+          const config = STATUS_CONFIG[key];
+          return (
+            <button
+              key={key}
+              disabled={loading}
+              onClick={() => updateStatus(key)}
+              className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border-2 ${
+                isActive 
+                  ? `border-blue-600 bg-blue-50/50` 
+                  : "border-transparent bg-slate-50 hover:bg-slate-100 text-slate-400"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`h-2 w-2 rounded-full ${config.color} ${isActive ? 'animate-pulse' : 'opacity-40'}`} />
+                <span className={`text-xs font-black uppercase tracking-widest ${isActive ? 'text-blue-600' : ''}`}>
+                  {config.label}
+                </span>
+              </div>
+              <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                isActive ? "border-blue-600 bg-blue-600" : "border-slate-200"
+              }`}>
+                {isActive && <div className="h-2 w-2 bg-white rounded-full" />}
+              </div>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

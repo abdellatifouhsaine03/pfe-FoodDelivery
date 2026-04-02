@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+.AiAssetentemain {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    width: 70px;
+}
+
+.AiAssetenteimage {
+    width: 100%;
+    height: auto;
+    border-radius: 50%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+}

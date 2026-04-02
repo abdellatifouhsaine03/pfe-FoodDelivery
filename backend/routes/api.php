@@ -1,6 +1,7 @@
 <?php
 
 
+use App\Http\Controllers\AIController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\cafesController;
 use App\Http\Controllers\MenuController;
@@ -91,7 +92,8 @@ Route::put('/users/{id}', [UserController::class, 'update']);
 //resto user
 Route::get('/user/{id}/restaurant', [RestaurantController::class, 'getRestaurantByUser']);
 
-
+//chatAi
+Route::post('/ai/chat', [AIController::class, 'chat']);
 
 
 //yoouseff-----------------------------------------------

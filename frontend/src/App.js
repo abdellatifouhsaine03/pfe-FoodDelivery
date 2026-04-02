@@ -21,6 +21,9 @@ import AppLivreur from "./pages/livreur/AppLivreur";
 import { DashboardView } from "./pages/livreur/Views/DashboardView";
 import DashboardResto from "./pages/dashboard";
 import ProtectedRoute from "./components/ProtectedRoutes";
+import AiAssetente from "./components/Ai-Assetente";
+
+
 
 function App() {
   const location = useLocation();
@@ -75,8 +78,9 @@ function App() {
                 <Route path="/livreur/*" element={<AppLivreur />} />
               </Route>
             </Routes>
+            {!admin && !livreur && !partner && <AiAssetente />}
           </main>
-          {!admin && <Footer />}
+          {!admin && !livreur && !partner && <Footer />}
         </div>
       </SelectedRestaurantProvider>
     </CartProvider>
