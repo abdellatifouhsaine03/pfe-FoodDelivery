@@ -9,6 +9,7 @@ import image1 from "../10.jpeg"
 
 const Resto = () => {
   const [resto, setResto] = useState();
+  const [address, setAddress] = useState();
   const { id } = useParams();
   const [contact, setContact] = useState();
   const [similarRestaurants, setSimilarRestaurants] = useState([]);
@@ -19,6 +20,7 @@ const Resto = () => {
     axios.get(`http://localhost:8000/api/restaurants/${id}/menus`)
       .then(response => {
         setResto(response.data.restaurant_name);
+        setAddress(response.data.restaurant_address);
         setMenu(response.data.categories);
         setContact(response.data.user);
       })
@@ -115,7 +117,7 @@ const Resto = () => {
   {/* 3. LOCATION / MAP - Modern Inset */}
   <div className="lg:col-span-5 bg-white rounded-[2.5rem] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.03)] border border-gray-100 group">
     <div className="h-full w-full rounded-[2rem] overflow-hidden relative">
-      <MapSection />
+      <MapSection restaurant={resto} address={address} />
       {/* Overlay Badge for Map */}
       <div className="absolute bottom-4 left-4 right-4 bg-white/80 backdrop-blur-xl p-4 rounded-2xl flex items-center justify-between border border-white/50">
         <div>

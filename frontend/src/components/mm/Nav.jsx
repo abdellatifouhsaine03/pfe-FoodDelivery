@@ -47,6 +47,8 @@ function Nav() {
   const storedUser = JSON.parse(localStorage.getItem("user"));
   const userId = storedUser?.id;
 
+  console.log("Nav rendered with user:", storedUser);
+
   const [showCart, setShowCart] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [client, setClient] = useState(storedUser || null);
@@ -305,7 +307,7 @@ function Nav() {
             {client ? (
               <button onClick={() => setShowProfile(true)} className="flex items-center gap-2 p-1 pr-3 rounded-full hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all">
                 <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xs font-bold uppercase">{client?.name?.charAt(0) || "U"}</div>
-                <span className="text-xs font-bold text-slate-700 hidden sm:block">{client.name}</span>
+                <span className="text-xs font-bold text-slate-700 hidden sm:block">{client.username}</span>
               </button>
             ) : (
               <button onClick={() => navigate("/login")} className="text-sm font-black text-slate-900 px-4">Login</button>
@@ -341,7 +343,7 @@ function Nav() {
                 </div>
               ) : (
                 <>
-                  <h2 className="text-2xl font-black text-slate-900">{client?.name}</h2>
+                  <h2 className="text-2xl font-black text-slate-900">{client?.username}</h2>
                   <p className="text-sm text-slate-400 mb-3">{client?.email}</p>
                   <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600 mb-6">
                     {activeOrdersCount > 0 ? `${activeOrdersCount} active order${activeOrdersCount > 1 ? "s" : ""}` : "No active orders"}

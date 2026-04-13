@@ -36,6 +36,10 @@ Route::get('/restaurants/HotRestaurants', [RestaurantController::class, 'HotRest
 Route::get('/restaurants/{id}/similar', [RestaurantController::class, 'simularresto']);
 
 
+//email verification
+Route::get('email/verify/{id}/{hash}', [AuthController::class, 'verify'])
+    ->name('verification.verify');
+
 //cafe
 Route::get('/cafes', [cafesController::class, 'index']);
 Route::get('/cafes/brandes', [cafesController::class, 'cofebrande']);

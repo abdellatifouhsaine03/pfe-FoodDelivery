@@ -1,13 +1,15 @@
 import React from "react";
 
-const MapSection = () => {
+const MapSection = ({restaurant , address}) => {
   return (
     <div className="group relative h-full min-h-[300px] w-full overflow-hidden rounded-[2.5rem] bg-gray-900 shadow-2xl">
       {/* 1. THE MAP BACKGROUND */}
       <div className="absolute inset-0 h-full w-full">
         <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d193595.2528082187!2d-74.11976373946229!3d40.69766374874431!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c24fa5d33f083b%3A0xc80b8f06e177fe62!2sNew%20York%2C%20NY!5e0!3m2!1sen!2sus!4v1647450000000!5m2!1sen!2sus"
-          width="100%"
+          src={`https://www.google.com/maps?q=${encodeURIComponent(
+                    restaurant + ", " + address
+                  )}&output=embed`}
+
           height="100%"
           style={{ border: 0 }}
           allowFullScreen=""
@@ -27,7 +29,7 @@ const MapSection = () => {
           {/* Main Info */}
           <div className="flex-1 space-y-1">
             <div className="flex items-center gap-3">
-              <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Pizza Hut HQ</h3>
+              <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">{restaurant}</h3>
               <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
             </div>
             
@@ -42,13 +44,15 @@ const MapSection = () => {
             </div>
 
             <p className="text-sm text-gray-300 font-medium leading-tight pt-1">
-              123 Main Street, New York, NY 10001
+              {address}
             </p>
           </div>
 
           {/* Action Button */}
           <a
-            href="https://goo.gl/maps/123"
+            href={`https://www.google.com/maps?q=${encodeURIComponent(
+                    restaurant + ", " + address
+                  )}&output=embed`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full md:w-auto inline-flex items-center justify-center gap-3 rounded-2xl bg-orange-500 px-8 py-4 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-white hover:text-black active:scale-95 shadow-lg shadow-orange-500/20"

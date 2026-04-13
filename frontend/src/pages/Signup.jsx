@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { User, Mail, Phone, MapPin, Lock, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Lock, ArrowRight, Loader2, CheckCircle2, Inbox } from 'lucide-react';
 import ima from './1.png';
 
 const Signup = () => {
@@ -14,8 +14,10 @@ const Signup = () => {
     address: '',
     agreeTerms: false,
   });
+  
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false); // New state for email verification view
   const navigate = useNavigate();
 
   const handleChange = e => {
@@ -37,25 +39,63 @@ const Signup = () => {
     setIsSubmitting(true);
 
     try {
-      const res = await axios.post('http://localhost:8000/api/register', {
+      // Endpoint hits your AuthController@register
+      await axios.post('http://localhost:8000/api/register', {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        password_confirmation: formData.confirmPassword,
+        password_confirmation: formData.confirmPassword, // Required by Laravel 'confirmed' rule
         phone: formData.phone,
         address: formData.address,
       });
 
-      localStorage.setItem('token', res.data.token);
-      // Redirecting to login to ensure they authenticate and get user data
-      navigate('/login');
+      // Instead of navigating to login immediately, we show the verification message
+      setIsRegistered(true);
+      
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Check your details.');
+      if (err.response?.data) {
+        // Captures Laravel validation errors (like "email already taken")
+        const serverErrors = err.response.data;
+        const firstError = Object.values(serverErrors)[0];
+        setError(Array.isArray(firstError) ? firstError[0] : 'Registration failed.');
+      } else {
+        setError('Connection to server failed.');
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // --- VIEW: CHECK YOUR EMAIL ---
+  if (isRegistered) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4 font-sans">
+        <div className="max-w-md w-full bg-white rounded-[3rem] p-12 text-center shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] border border-slate-100">
+          <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-8 animate-bounce">
+            <Inbox size={48} />
+          </div>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-4">Check your Gmail</h2>
+          <p className="text-slate-500 font-medium leading-relaxed mb-8">
+            We've sent a secure verification link to:<br/>
+            <span className="text-emerald-600 font-bold">{formData.email}</span>
+          </p>
+          <div className="space-y-4">
+            <button 
+              onClick={() => navigate('/login')}
+              className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black hover:bg-slate-800 transition-all"
+            >
+              Go to Login
+            </button>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">
+              Didn't get an email? Check your spam folder.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- VIEW: SIGNUP FORM ---
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4 md:p-8 font-sans">
       <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-12 bg-white rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] overflow-hidden border border-slate-100">
@@ -95,7 +135,6 @@ const Signup = () => {
             </header>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* TWO COLUMN GRID FOR INPUTS */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 
                 {/* Full Name */}
@@ -181,7 +220,7 @@ const Signup = () => {
               </div>
 
               {error && (
-                <div className="bg-rose-50 text-rose-500 text-xs font-bold p-4 rounded-xl border border-rose-100">
+                <div className="bg-rose-50 text-rose-500 text-xs font-bold p-4 rounded-xl border border-rose-100 animate-shake">
                   {error}
                 </div>
               )}
@@ -207,7 +246,6 @@ const Signup = () => {
         </div>
       </div>
 
-      {/* REUSABLE STYLES VIA TAILWIND */}
       <style jsx="true">{`
         .auth-input-style {
           width: 100%;
@@ -226,6 +264,12 @@ const Signup = () => {
           border-color: #10b981;
           box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
         }
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-4px); }
+          75% { transform: translateX(4px); }
+        }
+        .animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
       `}</style>
     </div>
   );

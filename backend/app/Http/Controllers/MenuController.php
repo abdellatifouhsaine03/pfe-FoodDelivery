@@ -46,6 +46,7 @@ class MenuController extends Controller
         // Retourner le résultat avec le nom du restaurant
         return response()->json([
             'restaurant_name' => $restaurant->name,
+            'restaurant_address' => $restaurant->address,
             'categories' => $result,
             'user'=>$user
         ]);

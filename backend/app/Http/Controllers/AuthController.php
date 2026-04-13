@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -36,7 +38,14 @@ class AuthController extends Controller
 
         $token = JWTAuth::fromUser($user);
 
-        return response()->json(compact('user', 'token'));
+        // 1. Fire this event to send the Gmail automatically
+         event(new Registered($user));
+
+        return response()->json([
+            'user' => $user,
+            'token' => $token,
+            'redirect_to' => $this->getRedirectUrlByType($user->type),
+        ]);
     }
 
     public function login(Request $request)
@@ -72,4 +81,36 @@ private function getRedirectUrlByType($type)
             return '/';
     }
 }
+
+
+// 2. Add the Verify method to handle the link click : mli kaywslo dak lcode o kaydkhlo
+public function verify(Request $request, $id, $hash)
+{
+    $user = User::findOrFail($id);
+
+    if (!hash_equals((string) $hash, sha1($user->getEmailForVerification()))) {
+        return redirect(env('FRONTEND_URL') . '/login?status=error');
+    }
+
+    if (!$user->hasVerifiedEmail()) {
+        $user->markEmailAsVerified();
+        event(new Verified($user));
+    }
+
+    // Prepare data for LocalStorage
+    $params = http_build_query([
+        'verified' => 'true',
+        'id'       => $user->id,
+        'username' => $user->name,
+        'email'    => $user->email,
+        'address'  => $user->address,
+        'type'     => $user->type ?? 'client',
+        'redirect_to' => $this->getRedirectUrlByType($user->type), // Ensure this exists in your users table
+    ]);
+
+    return redirect(env('FRONTEND_URL') . '/?' . $params);
 }
+}
+
+
+
